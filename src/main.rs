@@ -1,10 +1,9 @@
+use axum::{routing::post, Router};
 use std::sync::Arc;
-
-use axum::{extract::State, routing::post, Json, Router};
-use model::User;
-use services::Services;
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
+mod handlers;
 mod model;
 mod services;
 
@@ -14,15 +13,12 @@ async fn main() {
     let services = Arc::new(services);
 
     let router = Router::new()
-        .route("/create_user", post(create_user_handler))
+        .route("/create-user", post(handlers::create_user))
+        .route("/login", post(handlers::login))
+        .layer(CorsLayer::permissive().allow_private_network(true))
         .with_state(services);
+
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
 
     axum::serve(listener, router).await.unwrap();
-}
-
-async fn create_user_handler(state: State<Arc<Services>>, user: Json<User>) {
-    println!("creating user: {user:#?}");
-    state.insert_user(user.0).await;
-
 }
